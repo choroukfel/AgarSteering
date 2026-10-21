@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Agar Steering</title>
+    <meta name="description" content="Un jeu inspiré d'Agar.io où chaque cellule est pilotée par les steering behaviors de Craig Reynolds : seek, arrive, pursue, evade, wander, flocking, path following et évolution génétique.">
+    <meta name="theme-color" content="#020910">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Agar Steering">
+    <meta property="og:description" content="Mangez ou soyez mangé : un Agar.io dont toutes les cellules sont pilotées par des steering behaviors.">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23061420'/%3E%3Ccircle cx='34' cy='34' r='20' fill='%2322d3ee66' stroke='%2367e8f9' stroke-width='3'/%3E%3Ccircle cx='38' cy='36' r='8' fill='%230e7490'/%3E%3Ccircle cx='14' cy='15' r='5' fill='%23a3e635'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;700;800&display=swap">
+    <link rel="stylesheet" href="style.css">
+    <script src="libraries/p5.min.js"></script>
+    <script src="vehicle.js"></script>
+    <script src="config.js"></script>
+    <script src="theme.js"></script>
+    <script src="mass.js"></script>
+    <script src="behaviors/perception.js"></script>
+    <script src="behaviors/composition.js"></script>
+    <script src="behaviors/arrive.js"></script> 
+    <script src="behaviors/pursuit.js"></script>
+    <script src="behaviors/wander.js"></script>
+    <script src="behaviors/boundaries.js"></script>
+    <script src="behaviors/avoidance.js"></script>
+    <script src="behaviors/pathFollowing.js"></script>
+    <script src="behaviors/flocking.js"></script>
+    <script src="behaviors/collisionAvoidance.js"></script>
+    <script src="behaviors/flowField.js"></script>
+    <script src="behaviors/escort.js"></script>
+    <script src="genetics.js"></script>
+    <script src="brain.js"></script>
+    <script src="neuralDNA.js"></script>
+    <script src="brainPretrained.js"></script>
+    <script src="escape.js"></script>
+    <script src="noiseEvent.js"></script>
+    <script src="Cell.js"></script>
+    <script src="Food.js"></script>
+    <script src="Poison.js"></script>
+    <script src="Virus.js"></script>
+    <script src="EjectedMass.js"></script>
+    <script src="PlanktonBoid.js"></script>
+    <script src="PlayerCell.js"></script>
+    <script src="BotCell.js"></script>
+    <script src="raySensor.js"></script>
+    <script src="NeuralBotCell.js"></script>
+    <script src="EscortCell.js"></script>
+    <script src="PatrolPath.js"></script>
+    <script src="SnakeHead.js"></script>
+    <script src="SnakeSegment.js"></script>
+    <script src="playerController.js"></script>
+    <script src="spatialGrid.js"></script>
+    <script src="EffectParticle.js"></script>
+    <script src="rules.js"></script>
+    <script src="world.js"></script>
+    <script src="camera.js"></script>
+    <script src="ui.js"></script>
+    <script src="controls.js"></script>
+    <script src="clapDetector.js"></script>
+    <script src="microphone.js"></script>
+    <script src="audio.js"></script>
+    <script src="render.js"></script>
+    <script src="hud.js"></script>
+    <script src="sketch.js"></script>
+  </head>
+  <body>
+    <noscript><p class="noscript">Agar Steering nécessite JavaScript.</p></noscript>
+    <main id="scene" aria-label="Arène inspirée d'Agar.io pilotée par des steering behaviors">
+
+      <div id="score" class="hud-pill" aria-live="off">Chargement…</div>
+
+      <section id="leaderboard" class="panel" aria-label="Classement">
+        <h2>Classement</h2>
+        <ol id="leaderboard-list"></ol>
+      </section>
+
+      <details id="techniques" class="panel" open>
+        <summary>Techniques en action</summary>
+        <ul>
+          <li><b>Arrive</b> : votre cellule ralentit en approchant du curseur.</li>
+          <li><b>Split</b> (Espace) : impulsion, puis <b>séparation</b> entre vos cellules et <b>cohésion</b> pour refusionner.</li>
+          <li><b>Éjection</b> (W) : la masse lancée freine ; 7 masses dans un virus le font tirer.</li>
+          <li><b>Seek</b> : bots qui broutent <span id="stat-graze" class="count">0</span></li>
+          <li><b>Pursue</b> : bots qui chassent <span id="stat-hunt" class="count">0</span></li>
+          <li><b>Evade + endurance</b> : en fuite <span id="stat-flee" class="count">0</span> épuisés <span id="stat-exhausted" class="count">0</span></li>
+          <li><b>Wander</b> : bots qui errent <span id="stat-wander" class="count">0</span></li>
+          <li><b>Obstacle avoidance</b> : les grosses cellules contournent les virus <span id="stat-viruses" class="count">0</span></li>
+          <li><b>Boundaries</b> : tout le monde reste dans l'arène.</li>
+          <li><b>Boids</b> (séparation, alignement, cohésion) : plancton <span id="stat-plankton" class="count">0</span></li>
+          <li><b>Path following</b> + projection scalaire : serpent <span id="stat-snake" class="count">—</span>, <b>poursuite parfaite</b> en chasse.</li>
+          <li><b>Arrive avec décalage</b> : les anneaux du serpent.</li>
+          <li><b>Évolution</b> : naissances <span id="stat-births" class="count">0</span> génération <span id="stat-generation" class="count">0</span> meilleure fitness <span id="stat-fitness" class="count">0</span><br><small id="stat-genes"></small></li>
+          <li><b>Réseau de neurones</b> (neuroévolution) : bots 🧠 <span id="stat-neural" class="count">0</span> génération <span id="stat-neural-generation" class="count">0</span><br><small id="stat-neural-compare"></small><br><small id="stat-neural-shape"></small></li>
+          <li><b>Unaligned collision avoidance</b> : les cellules de même taille anticipent leurs croisements.</li>
+          <li><b>Flow field following</b> : le plancton et les bots qui errent suivent les courants.</li>
+          <li><b>Offset pursuit + interpose</b> : gardes du roi <span id="stat-escorts" class="count">0</span> qui protègent <span id="stat-escorts-protecting" class="count">0</span></li>
+          <li><b>Audition</b> (touche C ou micro) : bots qui enquêtent <span id="stat-investigate" class="count">0</span> effrayés <span id="stat-startled" class="count">0</span></li>
+          <li><b>Combinaison des forces</b> : <span id="stat-composition">somme pondérée</span> · <b>grille spatiale</b> de perception</li>
+        </ul>
+      </details>
+
+      <div id="toasts" aria-live="polite"></div>
+
+      <div id="corner-buttons">
+        <button id="menu-button" class="icon-button" type="button" title="Menu (Échap)" aria-label="Menu">☰</button>
+        <button id="settings-toggle" class="icon-button" type="button" title="Réglages" aria-label="Réglages" aria-expanded="false" aria-controls="settings">⚙</button>
+      </div>
+
+      <aside id="settings" class="panel" hidden aria-label="Réglages">
+        <h2>Réglages</h2>
+        <label class="row" for="mode">Mode
+          <select id="mode">
+            <option value="play">Jouer</option>
+            <option value="spectate">Spectateur (observer l'IA)</option>
+          </select>
+        </label>
+        <label class="row check"><input id="debug" type="checkbox"> Debug : perception et forces (D)</label>
+        <label class="row" for="composition">Combinaison des forces
+          <select id="composition">
+            <option value="weighted">Somme pondérée</option>
+            <option value="priority">Priorités (Reynolds)</option>
+          </select>
+        </label>
+        <label class="row check"><input id="flow-enabled" type="checkbox" checked> Courants (flow field)</label>
+        <label class="row check"><input id="sound-enabled" type="checkbox" checked> Effets sonores</label>
+        <label class="row check"><input id="mic-enabled" type="checkbox"> Micro : clap = bruit, double clap = split</label>
+        <small id="mic-status" class="mic-status">Touche C : faire du bruit (les proies fuient, les prédateurs viennent voir).</small>
+        <label class="row" for="bot-count">Bots <output id="bot-count-value" for="bot-count">14</output>
+          <input id="bot-count" type="range" min="2" max="40" step="1" value="14">
+        </label>
+        <label class="row" for="food-count">Nourriture <output id="food-count-value" for="food-count">700</output>
+          <input id="food-count" type="range" min="100" max="1500" step="10" value="700">
+        </label>
+        <label class="row" for="plankton-count">Plancton <output id="plankton-count-value" for="plankton-count">45</output>
+          <input id="plankton-count" type="range" min="0" max="150" step="1" value="45">
+        </label>
+        <label class="row" for="mutation-rate">Mutation <output id="mutation-rate-value" for="mutation-rate">10 %</output>
+          <input id="mutation-rate" type="range" min="0" max="0.5" step="0.01" value="0.1">
+        </label>
+        <label class="row" for="neural-share">Bots neuronaux 🧠 <output id="neural-share-value" for="neural-share">50 %</output>
+          <input id="neural-share" type="range" min="0" max="1" step="0.05" value="0.5" title="Part des prochaines naissances pilotées par un réseau de neurones">
+        </label>
+        <label class="row" for="tempo-rate">Accélération <output id="tempo-rate-value" for="tempo-rate">5 %/min</output>
+          <input id="tempo-rate" type="range" min="0" max="0.15" step="0.01" value="0.05" title="Hausse des vitesses par minute de manche (plafond ×1,5)">
+        </label>
+        <label class="row" for="flee-duration">Fuite max <output id="flee-duration-value" for="flee-duration">3.0 s</output>
+          <input id="flee-duration" type="range" min="0.5" max="8" step="0.1" value="3">
+        </label>
+        <button id="restart" class="secondary" type="button">Rejouer (R)</button>
+      </aside>
+
+      <div id="touch-controls" hidden>
+        <button id="touch-eject" type="button" aria-label="Éjecter de la masse">W</button>
+        <button id="touch-split" type="button" aria-label="Split">Split</button>
+        <button id="touch-call" type="button" aria-label="Faire du bruit (touche C)">Bruit</button>
+      </div>
+
+      <p id="help">Souris : diriger · <kbd>Espace</kbd> split · <kbd>W</kbd> éjecter · <kbd>C</kbd> bruit · <kbd>D</kbd> debug · <kbd>Échap</kbd> menu</p>
+
+      <section id="menu" class="screen" aria-label="Menu principal">
+        <div class="card">
+          <h1 class="logo"><span class="logo-agar">Agar</span><span class="logo-steering">Steering</span></h1>
+          <p class="tagline">Mangez ou soyez mangé. Chaque cellule est pilotée par les <em>steering behaviors</em> de Craig Reynolds.</p>
+          <form id="menu-form" autocomplete="off">
+            <input id="nickname" type="text" maxlength="15" placeholder="Votre pseudo" aria-label="Pseudo" spellcheck="false">
+            <div id="color-choices" role="radiogroup" aria-label="Couleur de votre cellule"></div>
+            <button id="play-button" class="primary" type="submit">Jouer</button>
+            <button id="spectate-button" class="secondary" type="button">Observer l'IA</button>
+          </form>
+          <ul class="keys keys-touch">
+            <li><kbd>Doigt</kbd> diriger</li>
+            <li><kbd>Split</kbd> se diviser</li>
+            <li><kbd>W</kbd> éjecter (maintenir)</li>
+            <li><kbd>Bruit</kbd> attirer les bots</li>
+          </ul>
+          <ul class="keys keys-mouse">
+            <li><kbd>Souris</kbd> diriger</li>
+            <li><kbd>Espace</kbd> se diviser</li>
+            <li><kbd>W</kbd> éjecter de la masse</li>
+            <li><kbd>D</kbd> voir perception et forces</li>
+          </ul>
+          <p class="credits">Projet M2 IA2 · d'après <cite>Steering Behaviors for Autonomous Characters</cite> (Reynolds, GDC 1999)</p>
+        </div>
+      </section>
+
+      <section id="game-over" class="screen" hidden aria-label="Fin de partie">
+        <div class="card">
+          <h2>Vous avez été mangé !</h2>
+          <p id="killer" class="killer"></p>
+          <dl class="final-stats">
+            <div><dt>Masse max</dt><dd id="final-mass">0</dd></div>
+            <div><dt>Survie</dt><dd id="final-time">0:00</dd></div>
+            <div><dt>Cellules mangées</dt><dd id="final-kills">0</dd></div>
+            <div><dt>Nourriture</dt><dd id="final-food">0</dd></div>
+          </dl>
+          <button id="game-over-restart" class="primary" type="button">Rejouer</button>
+          <button id="game-over-menu" class="secondary" type="button">Menu</button>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
